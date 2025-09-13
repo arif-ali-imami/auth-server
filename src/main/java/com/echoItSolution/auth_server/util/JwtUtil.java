@@ -1,15 +1,20 @@
 package com.echoItSolution.auth_server.util;
 
+import ch.qos.logback.core.util.StringUtil;
 import com.echoItSolution.auth_server.dto.AuthResponseDTO;
 import com.echoItSolution.auth_server.dto.CustomUserDetails;
+import com.echoItSolution.auth_server.enums.AuthProviderType;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Objects;
 
 @Component
 public class JwtUtil {
@@ -55,4 +60,56 @@ public class JwtUtil {
                 .iat(extractClaim(token, "iat", Long.class))
                 .userId(customUserDetail.getUserId()).build();
     }
+
+    public String findUsernameFromOAuth2User(OAuth2User oAuth2User, String registrationId, String providerId) {
+        String email = oAuth2User.getAttribute("email");
+        if(StringUtil.notNullNorEmpty(email))
+            return email;
+        return switch (registrationId){
+            case "google" -> oAuth2User.getAttribute("sub");
+            case "github" -> oAuth2User.getAttribute("login");
+            default -> providerId;
+        };
+    }
+
+    public AuthProviderType getProviderType(String registrationId) {
+        return switch (registrationId){
+            case "google" -> AuthProviderType.GOOGLE;
+            case "facebook" -> AuthProviderType.FACEBOOK;
+            case "github" -> AuthProviderType.GITHUB;
+            default -> throw new IllegalStateException("Unexpected value: " + registrationId);
+        };
+    }
+
+    public String getProviderId(String registrationId, OAuth2User oAuth2User) {
+        return switch (registrationId){
+            case "google" -> oAuth2User.getAttribute("sub");
+            case "github" -> Objects.requireNonNull(oAuth2User.getAttribute("id")).toString();
+            default -> throw new IllegalStateException("Unexpected auth provider: " + registrationId);
+        };
+    }
+
+    // Refresh Token (long-lived, e.g., 7 days)
+    public String generateRefreshToken(CustomUserDetails userDetail) {
+        return Jwts.builder()
+                .subject(userDetail.getUsername())
+                .claim("userId", userDetail.getUserId().toString())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7)) // 7 days
+                .signWith(getSecretKey())
+                .compact();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser()
+                    .verifyWith(getSecretKey())
+                    .build()
+                    .parseSignedClaims(token); // will throw if invalid or expired
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
 }

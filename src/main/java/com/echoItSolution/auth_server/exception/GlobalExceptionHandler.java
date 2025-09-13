@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -16,7 +17,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> illegalArgumentException(IllegalArgumentException ex,
                                                                        HttpServletRequest request){
-        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getServletPath());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getServletPath());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleException(Exception ex,
+                                                                        HttpServletRequest request){
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request.getServletPath());
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex,
+                                                               HttpServletRequest request){
+        return buildResponse(HttpStatus.valueOf(ex.getStatusCode().value()), ex.getMessage(), request.getServletPath());
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, String path) {
