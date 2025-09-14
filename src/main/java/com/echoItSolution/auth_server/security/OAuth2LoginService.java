@@ -1,5 +1,6 @@
 package com.echoItSolution.auth_server.security;
 
+import com.echoItSolution.auth_server.clients.UserClient;
 import com.echoItSolution.auth_server.dto.AuthResponseDTO;
 import com.echoItSolution.auth_server.dto.CustomUserDetails;
 import com.echoItSolution.auth_server.dto.UserDTO;
@@ -12,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +23,7 @@ public class OAuth2LoginService {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
-    private final RestTemplate restTemplate;
+    private final UserClient userClient;
 
     public ResponseEntity<AuthResponseDTO> handleOAuth2LoginRequest(OAuth2User oAuth2User, String registrationId) {
         // fetch providerId
@@ -61,23 +61,14 @@ public class OAuth2LoginService {
     }
 
     private UserDTO signUpUser(String username, AuthProviderType providerType, String providerId) {
-        String url = "http://USER-SERVICE/api/v1/account/user/create";
+//        String url = "http://USER-SERVICE/api/v1/account/user/create";
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("userName", username);
-        requestBody.put("providerType", providerType.name()); // enums as String
+        requestBody.put("providerType", providerType.name());
         requestBody.put("password", "12345");
         requestBody.put("providerId", providerId);
-        return restTemplate.postForObject(url, requestBody, UserDTO.class);
+//        return restTemplate.postForObject(url, requestBody, UserDTO.class);
+        return userClient.signUp(requestBody);
     }
 
-//    private UserDTO singUp(UserRequestDTO userRequestDTO, String providerId, AuthProviderType providerType) {
-//        Role userDefaultRole = userRoleRepository.findByName(RoleType.PATIENT).orElseThrow();
-//        User user = userRepository.save(
-//                User.builder().userName(userRequestDTO.getUserName()).providerId(providerId).providerType(providerType)
-//                        .userRoles(Set.of(userDefaultRole))
-//                        .build()
-//        );
-//        patientService.create(userRequestDTO.getUserName(), user.getId());
-//        return new UserDTO(user.getId(), user.getUserName(), user.getUserRoles());
-//    }
 }
