@@ -1,5 +1,6 @@
 package com.echoItSolution.auth_server.dto;
 
+import com.echoItSolution.auth_server.entity.Permission;
 import com.echoItSolution.auth_server.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +10,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 @AllArgsConstructor
@@ -25,7 +28,15 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return userRoles.stream().map(role -> new SimpleGrantedAuthority(role.getName().name())).toList();
+        List<SimpleGrantedAuthority> grantedAuthorityList = new ArrayList<>();
+        userRoles.stream().forEach(userRole ->{
+            grantedAuthorityList.add(new SimpleGrantedAuthority("ROLE_"+userRole.getName()));
+            grantedAuthorityList.addAll(userRole.getPermissions().stream().map(
+                    permission -> new SimpleGrantedAuthority(permission.getName().name()))
+                    .toList());
+        });
+        return grantedAuthorityList;
+//        return userRoles.stream().map(role -> new SimpleGrantedAuthority(role.getName().name())).toList();
     }
 
     @Override
